@@ -56,14 +56,15 @@ const ShadowPlane: React.FC<ShadowProps> = ({
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
   return (
-    <mesh rotation-x={-Math.PI / 2} position={[0, 0, -0.01]} receiveShadow>
-      <planeGeometry args={[200, 200]} />
+    <mesh rotation-x={-Math.PI / 2} position={[0, 0, 1]} receiveShadow>
+      <planeGeometry args={[20, 20]} />
       <shadowMaterial
         ref={materialRef}
         transparent={true}
         uShadowColor={uShadowColor}
         uAlpha={uAlpha}
       />
+      <meshBasicMaterial wireframe={true} color="blue" />
     </mesh>
   );
 };
