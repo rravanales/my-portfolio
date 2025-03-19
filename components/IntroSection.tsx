@@ -1,6 +1,6 @@
 "use client";
-import React, { Suspense, useRef, useEffect } from "react";
-import { Canvas } from "@react-three/fiber";
+import React, { Suspense, useRef, useEffect, useMemo } from "react";
+import { Canvas, extend, useThree } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import { useControls } from "leva";
 import * as THREE from "three";
@@ -8,7 +8,7 @@ import gsap from "gsap";
 import FloorShadow from "./FloorShadow";
 
 // -----------------------------------------------------------------------------
-// Componente genérico para cargar modelos GLTF (con sombra y wireframe)
+// Componente genérico para cargar modelos GLTF con sombras y wireframe
 type ModelProps = {
   url: string;
   position: [number, number, number];
@@ -29,7 +29,7 @@ const Model: React.FC<ModelProps> = ({
   receiveShadow = false,
 }) => {
   const { scene } = useGLTF(url) as { scene: THREE.Group };
-  const clonedScene = React.useMemo(() => {
+  const clonedScene = useMemo(() => {
     const clone = scene.clone();
     clone.traverse((child) => {
       if (child instanceof THREE.Mesh && child.material) {
@@ -42,7 +42,6 @@ const Model: React.FC<ModelProps> = ({
     });
     return clone;
   }, [scene, wireframe, castShadow, receiveShadow]);
-
   return (
     <primitive
       object={clonedScene}
@@ -54,12 +53,9 @@ const Model: React.FC<ModelProps> = ({
 };
 
 // -----------------------------------------------------------------------------
-// Componentes para la sección Intro
+// Componentes de la sección Intro
 
-// Escenario estático (Base de Intro)
-const StaticScene: React.FC<{ wireframe?: boolean }> = ({
-  wireframe = false,
-}) => (
+const StaticScene: React.FC<{ wireframe?: boolean }> = ({ wireframe = false }) => (
   <Model
     url="/models/intro/static/base.glb"
     position={[0, 0, 0]}
@@ -69,13 +65,12 @@ const StaticScene: React.FC<{ wireframe?: boolean }> = ({
   />
 );
 
-// Instrucciones visuales (buscando el mesh "arrows")
 type InstructionsProps = { wireframe?: boolean };
 const Instructions: React.FC<InstructionsProps> = ({ wireframe = false }) => {
   const { scene } = useGLTF("/models/intro/instructions/labels.glb") as {
     scene: THREE.Group;
   };
-  const arrowMesh = React.useMemo(() => {
+  const arrowMesh = useMemo(() => {
     const obj = scene.getObjectByName("arrows")?.clone();
     if (obj) {
       obj.traverse((child) => {
@@ -94,37 +89,16 @@ const Instructions: React.FC<InstructionsProps> = ({ wireframe = false }) => {
   return <primitive object={arrowMesh} />;
 };
 
-// Tecla "ArrowUp" con interactividad al pasar el puntero
-const ArrowUp: React.FC<{ wireframe?: boolean }> = ({ wireframe = false }) => {
-  const groupRef = useRef<THREE.Group>(null);
-  const handlePointerOver = () => {
-    if (groupRef.current) {
-      gsap.to(groupRef.current.scale, { x: 1.2, y: 1.2, z: 1.2, duration: 0.3 });
-    }
-  };
-  const handlePointerOut = () => {
-    if (groupRef.current) {
-      gsap.to(groupRef.current.scale, { x: 1, y: 1, z: 1, duration: 0.3 });
-    }
-  };
-  return (
-    <group
-      ref={groupRef}
-      onPointerOver={handlePointerOver}
-      onPointerOut={handlePointerOut}
-    >
-      <Model
-        url="/models/intro/arrowKey/base.glb"
-        position={[-1, 0.5, 0]}
-        name="arrowUp"
-        wireframe={wireframe}
-        castShadow
-      />
-    </group>
-  );
-};
+const ArrowUp: React.FC<{ wireframe?: boolean }> = ({ wireframe = false }) => (
+  <Model
+    url="/models/intro/arrowKey/base.glb"
+    position={[-1, 0.5, 0]}
+    name="arrowUp"
+    wireframe={wireframe}
+    castShadow
+  />
+);
 
-// Componentes para cada letra
 const LetterB: React.FC = () => (
   <Model url="/models/intro/b/base.glb" position={[-3, 0, 0]} name="letterB" castShadow />
 );
@@ -150,7 +124,6 @@ const LetterM: React.FC = () => (
   <Model url="/models/intro/m/base.glb" position={[4, 0, 0]} name="letterM" castShadow />
 );
 
-// Componentes adicionales
 const Creative: React.FC = () => (
   <Model url="/models/intro/creative/base.glb" position={[0, -2, 0]} name="creative" castShadow />
 );
@@ -158,9 +131,12 @@ const Dev: React.FC = () => (
   <Model url="/models/intro/dev/base.glb" position={[2, -2, 0]} name="dev" castShadow />
 );
 
-// Componente que agrupa y anima las letras con GSAP y agrega interactividad por clic
+// -----------------------------------------------------------------------------
+// Componente AnimatedLetters: agrupa y anima las letras y anima la cámara al clic
 const AnimatedLetters: React.FC = () => {
   const groupRef = useRef<THREE.Group>(null);
+  const { camera } = useThree();
+
   useEffect(() => {
     if (groupRef.current) {
       gsap.fromTo(
@@ -175,6 +151,7 @@ const AnimatedLetters: React.FC = () => {
       );
     }
   }, []);
+
   const handleClick = () => {
     if (groupRef.current) {
       gsap.to(groupRef.current.scale, {
@@ -185,9 +162,23 @@ const AnimatedLetters: React.FC = () => {
         yoyo: true,
         repeat: 1,
       });
-      console.log("Clic en las letras");
     }
+    gsap.to(camera.position, {
+      x: 0,
+      y: -20,
+      z: 10,
+      duration: 1,
+      ease: "power2.inOut",
+    });
+    gsap.to(camera.rotation, {
+      x: 0,
+      y: 0,
+      z: 0,
+      duration: 1,
+      ease: "power2.inOut",
+    });
   };
+
   return (
     <group ref={groupRef} onClick={handleClick}>
       <LetterB />
@@ -202,7 +193,8 @@ const AnimatedLetters: React.FC = () => {
   );
 };
 
-// Componente para controlar el wireframe mediante Leva (se mantiene igual)
+// -----------------------------------------------------------------------------
+// Componente para controlar el wireframe mediante Leva
 const WireframeControls: React.FC = () => {
   const { wireframe } = useControls("Wireframe Controls", {
     wireframe: { value: false },
@@ -219,11 +211,21 @@ const WireframeControls: React.FC = () => {
 // -----------------------------------------------------------------------------
 // Componente principal de la sección Intro
 const IntroSection: React.FC = () => {
+  // Usamos useControls para obtener la paleta para la sombra
+  const { shadowColor, shadowAlpha } = useControls("Shadow Palette", {
+    shadowColor: { value: "#d04500" },
+    shadowAlpha: { value: 0.5, min: 0, max: 1, step: 0.01 },
+  });
+
   return (
     <Canvas
       shadows
       style={{ width: "100vw", height: "100vh", display: "block" }}
       camera={{ position: [0, -60, 25], fov: 50 }}
+      onCreated={({ scene, gl }) => {
+        scene.background = new THREE.Color("#ffffff");
+        gl.outputColorSpace = THREE.SRGBColorSpace;
+      }}
     >
       <ambientLight intensity={0.8} />
       <directionalLight
@@ -238,7 +240,11 @@ const IntroSection: React.FC = () => {
         <AnimatedLetters />
         <Creative />
         <Dev />
-        <FloorShadow uShadowColor={new THREE.Color("#d04500")} uAlpha={0.5} />
+        {/* Integramos el piso con sombra personalizada pasando la paleta */}
+        <FloorShadow
+          uShadowColor={new THREE.Color(shadowColor)}
+          uAlpha={shadowAlpha}
+        />
       </Suspense>
       <OrbitControls enableDamping dampingFactor={0.1} minDistance={10} maxDistance={30} />
     </Canvas>

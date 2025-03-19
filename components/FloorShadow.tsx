@@ -64,7 +64,7 @@ const ShadowPlane: React.FC<ShadowProps> = ({
         uShadowColor={uShadowColor}
         uAlpha={uAlpha}
       />
-      <meshBasicMaterial wireframe={true} color="blue" />
+      {/* <meshBasicMaterial wireframe={true} color="blue" /> */}
     </mesh>
   );
 };
