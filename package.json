@@ -23,6 +23,8 @@
     "three": "^0.174.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.26.10",
+    "@babel/preset-typescript": "^7.26.0",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

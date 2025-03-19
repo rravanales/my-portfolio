@@ -1,14 +1,15 @@
 "use client";
-import React, { Suspense, useMemo } from "react";
+import React, { Suspense, useRef, useEffect, useMemo } from "react";
 import { Canvas, extend } from "@react-three/fiber";
 import { OrbitControls, useGLTF, shaderMaterial } from "@react-three/drei";
 import { useControls } from "leva";
 import * as THREE from "three";
 import glsl from "babel-plugin-glsl/macro";
 import gsap from "gsap";
-import FloorShadow from "./FloorShadow"; // Componente de piso con material personalizado
+import FloorShadow from "./FloorShadow"; // Componente del piso con sombra personalizado
+import ShadowPlane from "./FloorShadow";
 
-// --- COMPONENTE MODEL (con sombras) --- //
+// --- Componente genérico para cargar modelos GLTF --- //
 type ModelProps = {
   url: string;
   position: [number, number, number];
@@ -30,7 +31,7 @@ const Model: React.FC<ModelProps> = ({
 }) => {
   const { scene } = useGLTF(url) as { scene: THREE.Group };
 
-  // Clonar la escena y asignar las propiedades de sombra a cada mesh
+  // Clonar la escena y asignar propiedades de sombra y wireframe
   const clonedScene = useMemo(() => {
     const clone = scene.clone();
     clone.traverse((child) => {
@@ -55,8 +56,10 @@ const Model: React.FC<ModelProps> = ({
   );
 };
 
-// --- COMPONENTES DE LA SECCIÓN INTRO --- //
-const StaticScene: React.FC<{ wireframe?: boolean }> = ({ wireframe = false }) => (
+// --- Componentes de la sección Intro --- //
+const StaticScene: React.FC<{ wireframe?: boolean }> = ({
+  wireframe = false,
+}) => (
   <Model
     url="/models/intro/static/base.glb"
     position={[0, 0, 0]}
@@ -100,6 +103,7 @@ const ArrowUp: React.FC<{ wireframe?: boolean }> = ({ wireframe = false }) => (
   />
 );
 
+// Componentes para las letras
 const LetterB: React.FC = () => (
   <Model url="/models/intro/b/base.glb" position={[-3, 0, 0]} name="letterB" castShadow />
 );
@@ -125,6 +129,7 @@ const LetterM: React.FC = () => (
   <Model url="/models/intro/m/base.glb" position={[4, 0, 0]} name="letterM" castShadow />
 );
 
+// Componentes adicionales
 const Creative: React.FC = () => (
   <Model url="/models/intro/creative/base.glb" position={[0, -2, 0]} name="creative" castShadow />
 );
@@ -132,7 +137,40 @@ const Dev: React.FC = () => (
   <Model url="/models/intro/dev/base.glb" position={[2, -2, 0]} name="dev" castShadow />
 );
 
-// Componente para controlar el wireframe mediante Leva
+// Componente que agrupa todas las letras y las anima con GSAP
+const AnimatedLetters: React.FC = () => {
+  const groupRef = useRef<THREE.Group>(null);
+  useEffect(() => {
+    if (groupRef.current) {
+      // Animar la posición: desde y = -10 hasta y = 0
+      gsap.fromTo(
+        groupRef.current.position,
+        { y: -10 },
+        { y: 0, duration: 1.5, ease: "power2.out" }
+      );
+      // Animar la rotación: desde z = -PI/4 hasta z = 0
+      gsap.fromTo(
+        groupRef.current.rotation,
+        { z: -Math.PI / 4 },
+        { z: 0, duration: 1.5, ease: "power2.out" }
+      );
+    }
+  }, []);
+  return (
+    <group ref={groupRef}>
+      <LetterB />
+      <LetterR />
+      <LetterU />
+      <LetterN />
+      <LetterO />
+      <LetterS />
+      <LetterI />
+      <LetterM />
+    </group>
+  );
+};
+
+// Componente para controlar el wireframe (por Leva)
 const WireframeControls: React.FC = () => {
   const { wireframe } = useControls("Wireframe Controls", {
     wireframe: { value: false },
@@ -151,37 +189,24 @@ const WireframeControls: React.FC = () => {
 const IntroSection: React.FC = () => {
   return (
     <Canvas
-      shadows // Habilita sombras en el Canvas
+      shadows
       style={{ width: "100vw", height: "100vh", display: "block" }}
       camera={{ position: [0, -60, 25], fov: 50 }}
     >
       <ambientLight intensity={0.8} />
-      <directionalLight
-        name="directionalLight"
-        position={[5, 5, 5]}
-        intensity={1.8}
-        castShadow
-      />
-
-      {/* AxesHelper para visualizar los ejes */}
+      <directionalLight name="directionalLight" position={[5, 5, 5]} intensity={1.8} castShadow />
       <primitive object={new THREE.AxesHelper(5)} />
-
       <Suspense fallback={null}>
         <WireframeControls />
-        <LetterB />
-        <LetterR />
-        <LetterU />
-        <LetterN />
-        <LetterO />
-        <LetterS />
-        <LetterI />
-        <LetterM />
+        <AnimatedLetters />
         <Creative />
         <Dev />
         {/* Integramos el piso con sombra personalizada */}
-        <FloorShadow />
-      </Suspense>
+        <FloorShadow uShadowColor={new THREE.Color("#d04500")} uAlpha={0.5} />
+     
+        {/* <ShadowPlane uShadowColor={new THREE.Color("#d04500")} uAlpha={0.5} /> */}
 
+      </Suspense>
       <OrbitControls enableDamping dampingFactor={0.1} minDistance={10} maxDistance={30} />
     </Canvas>
   );
